@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Calculadora RV</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #0a3d62, #3c6382);
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: #1e5f8a;
+      padding: 20px;
+      border-radius: 12px;
+      max-width: 500px;
+      margin: auto;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+    }
+
+    input, select {
+      width: 90%;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 8px;
+      border: none;
+    }
+
+    button {
+      background: #00a8ff;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .result {
+      margin-top: 20px;
+      font-size: 18px;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>Calculadora de RV</h2>
+
+    <label>Selecione a célula:</label>
+    <select id="tipo">
+      <option value="n1">N1</option>
+      <option value="retencao">Retenção</option>
+    </select>
+
+    <!-- N1 -->
+    <div id="form-n1">
+      <h3>N1</h3>
+      <input type="number" id="csat_n1" placeholder="CSAT (%)">
+      <input type="number" id="fcr_n1" placeholder="FCR (%)">
+      <input type="number" id="tmo_n1" placeholder="TMO">
+      <input type="number" id="abs_n1" placeholder="ABS (%)">
+      <input type="number" id="tab_n1" placeholder="Tabulação (%)">
+      <input type="number" id="qualidade_n1" placeholder="Qualidade (%)">
+
+      <select id="presente">
+        <option value="0">Sem presentismo</option>
+        <option value="80">Presentismo 100%</option>
+      </select>
+    </div>
+
+    <!-- Retenção -->
+    <div id="form-retencao" style="display:none">
+      <h3>Retenção</h3>
+      <input type="number" id="atendidos" placeholder="Atendidos">
+      <input type="number" id="retidos" placeholder="Retidos">
+      <input type="number" id="qualidade" placeholder="Qualidade (%)">
+      <input type="number" id="csat" placeholder="CSAT (%)">
+      <input type="number" id="fcr" placeholder="FCR (%)">
+      <input type="number" id="abs" placeholder="ABS (%)">
+      <input type="number" id="tmo" placeholder="TMO">
+      <input type="number" id="pausa" placeholder="Pausa (%)">
+      <select id="fraude">
+        <option value="0">Sem fraude</option>
+        <option value="1">Com fraude</option>
+      </select>
+    </div>
+
+    <button onclick="calcularRV()">Calcular</button>
+
+    <div class="result" id="resultado"></div>
+  </div>
+
+  <script>
+    const tipo = document.getElementById("tipo");
+
+    tipo.addEventListener("change", () => {
+      document.getElementById("form-n1").style.display = tipo.value === "n1" ? "block" : "none";
+      document.getElementById("form-retencao").style.display = tipo.value === "retencao" ? "block" : "none";
+    });
+
+    function calcularRV() {
+
+      // ================= N1 =================
+      if (tipo.value === "n1") {
+        let total = 0;
+
+        const csat = parseFloat(document.getElementById("csat_n1").value);
+        const fcr = parseFloat(document.getElementById("fcr_n1").value);
+        const tmo = parseFloat(document.getElementById("tmo_n1").value);
+        const abs = parseFloat(document.getElementById("abs_n1").value);
+        const tab = parseFloat(document.getElementById("tab_n1").value);
+        const qualidade = parseFloat(document.getElementById("qualidade_n1").value);
+        const presente = parseFloat(document.getElementById("presente").value);
+
+        let detalhes = [];
+
+        // OURO
+        if (csat >= 91) { total += 30; detalhes.push("+30 CSAT"); }
+        if (fcr >= 77) { total += 30; detalhes.push("+30 FCR"); }
+        if (tmo <= 450) { total += 30; detalhes.push("+30 TMO"); }
+        if (abs <= 3) { total += 110; detalhes.push("+110 ABS"); }
+        if (tab <= 2) { total += 20; detalhes.push("+20 Tabulação"); }
+        if (qualidade >= 85) { total += 50; detalhes.push("+50 Qualidade"); }
+
+        total += presente;
+        if (presente > 0) detalhes.push("+80 Presentismo");
+
+        document.getElementById("resultado").innerHTML = `
+          <strong>Total N1: R$ ${total.toFixed(2)}</strong><br><br>
+          ${detalhes.join('<br>')}
+        `;
+      }
+
+      // ================= RETENÇÃO =================
+      if (tipo.value === "retencao") {
+
+        const atendidos = parseFloat(document.getElementById("atendidos").value);
+        const retidos = parseFloat(document.getElementById("retidos").value);
+
+        const qualidade = parseFloat(document.getElementById("qualidade").value);
+        const csat = parseFloat(document.getElementById("csat").value);
+        const fcr = parseFloat(document.getElementById("fcr").value);
+        const abs = parseFloat(document.getElementById("abs").value);
+        const tmo = parseFloat(document.getElementById("tmo").value);
+        const pausa = parseFloat(document.getElementById("pausa").value);
+        const fraude = parseFloat(document.getElementById("fraude").value);
+
+        let conversao = (retidos / atendidos) * 100;
+
+        let valorUnitario = 0;
+
+        if (conversao <= 76) valorUnitario = 0;
+        else if (conversao <= 77.99) valorUnitario = 1;
+        else if (conversao <= 79.99) valorUnitario = 1.8;
+        else if (conversao <= 80) valorUnitario = 2.5;
+        else valorUnitario = 3;
+
+        let total = retidos * valorUnitario;
+        let perdas = [];
+
+        if (qualidade < 85) { total *= 0.7; perdas.push("-30% Qualidade"); }
+        if (csat < 90) { total *= 0.9; perdas.push("-10% CSAT"); }
+        if (fcr < 85) { total *= 0.9; perdas.push("-10% FCR"); }
+        if (abs >= 4) { total *= 0.5; perdas.push("-50% ABS"); }
+        if (tmo > 900) { total *= 0.9; perdas.push("-10% TMO"); }
+        if (fraude >= 1) { total = 0; perdas.push("-100% Fraude"); }
+        if (pausa >= 15) { total *= 0.7; perdas.push("Impacto Pausa"); }
+
+        document.getElementById("resultado").innerHTML = `
+          Conversão: ${conversao.toFixed(2)}% <br>
+          Valor por retenção: R$ ${valorUnitario.toFixed(2)} <br>
+          Retidos: ${retidos} <br><br>
+          <strong>Total: R$ ${total.toFixed(2)}</strong><br><br>
+          Perdas aplicadas: ${perdas.join(', ') || 'Nenhuma'}
+        `;
+      }
+    }
+  </script>
+
+</body>
+</html>
